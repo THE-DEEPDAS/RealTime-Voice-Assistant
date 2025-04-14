@@ -14,6 +14,7 @@ from config import (
     SILENCE_DURATION,
     PRE_SPEECH_BUFFER_DURATION,
 )
+from gtts import gTTS
 
 # Load environment variables from TOML file
 config = toml.load("config.toml")
@@ -23,12 +24,6 @@ GROQ_API_KEY = config["GROQ_API_KEY"]
 class VoiceAssistant:
     def __init__(self):
         self.g_client = Groq(api_key=GROQ_API_KEY)
-        # Initialize text-to-speech engine
-        self.tts_engine = pyttsx3.init()
-        self.tts_engine.setProperty('rate', 180)  # Speed
-        self.tts_engine.setProperty('volume', 0.9)  # Volume
-        # Initialize pygame mixer
-        pygame.mixer.init()
         # Store conversation history
         self.conversation_history = []
 
@@ -89,7 +84,7 @@ class VoiceAssistant:
 
     def text_to_speech(self, text):
         """
-        Convert text to speech using pyttsx3 (offline TTS).
+        Convert text to speech using gTTS.
 
         Args:
             text (str): The text to convert to speech.
@@ -97,16 +92,21 @@ class VoiceAssistant:
         Returns:
             BytesIO: The audio stream.
         """
-        temp_file_path = tempfile.mktemp(suffix='.wav')
-        self.tts_engine.save_to_file(text, temp_file_path)
-        self.tts_engine.runAndWait()
+        try:
+            tts = gTTS(text=text, lang="en")
+            temp_file_path = tempfile.mktemp(suffix=".mp3")
+            tts.save(temp_file_path)
 
-        audio_stream = BytesIO()
-        with open(temp_file_path, 'rb') as f:
-            audio_stream.write(f.read())
-        os.remove(temp_file_path)
-        audio_stream.seek(0)
-        return audio_stream
+            # Convert MP3 to WAV for playback
+            audio_stream = BytesIO()
+            with open(temp_file_path, "rb") as f:
+                audio_stream.write(f.read())
+            os.remove(temp_file_path)
+            audio_stream.seek(0)
+            return audio_stream
+        except Exception as e:
+            print(f"Error generating speech: {e}")
+            return None
 
     def stream_audio(self, audio_stream):
         """
