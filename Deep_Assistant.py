@@ -85,29 +85,29 @@ class VoiceAssistant:
         Returns:
             BytesIO: The recorded audio bytes.
         """
-        stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
         frames = pre_speech_buffer.copy()
-
         silent_chunks = 0
+
+        print("Recording audio...")
         while True:
-            data = stream.read(CHUNK)
+            # Record a chunk of audio
+            data = sd.rec(CHUNK, samplerate=RATE, channels=CHANNELS, dtype='int16')
+            sd.wait()
             frames.append(data)
-            if self.is_silence(data):
+
+            # Check for silence
+            if self.is_silence(data.tobytes()):
                 silent_chunks += 1
             else:
                 silent_chunks = 0
+
+            # Stop recording if silence duration exceeds threshold
             if silent_chunks > int(RATE / CHUNK * SILENCE_DURATION):
                 break
 
-        stream.stop_stream()
-        stream.close()
-
+        # Convert recorded frames to BytesIO
         audio_bytes = BytesIO()
-        with wave.open(audio_bytes, 'wb') as wf:
-            wf.setnchannels(CHANNELS)
-            wf.setsampwidth(self.audio.get_sample_size(FORMAT))
-            wf.setframerate(RATE)
-            wf.writeframes(b''.join(frames))
+        write(audio_bytes, RATE, np.concatenate(frames))
         audio_bytes.seek(0)
 
         return audio_bytes

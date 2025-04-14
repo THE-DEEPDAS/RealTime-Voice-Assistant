@@ -5,3 +5,4 @@ groq
 pygame
 python-dotenv
 streamlit
+scipy
