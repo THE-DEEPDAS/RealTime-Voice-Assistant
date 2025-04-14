@@ -2,19 +2,18 @@ import wave
 from time import time
 import numpy as np
 from io import BytesIO
-import pyttsx3
 from groq import Groq
 import pygame
 import tempfile
 import os
 from scipy.io.wavfile import write
 import toml  # Import toml library for loading the config
+from gtts import gTTS
 from config import (
     SILENCE_THRESHOLD,
     SILENCE_DURATION,
     PRE_SPEECH_BUFFER_DURATION,
 )
-from gtts import gTTS
 
 # Load environment variables from TOML file
 config = toml.load("config.toml")
