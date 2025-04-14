@@ -1,8 +1,8 @@
-sounddevice
+streamlit
+streamlit-audio-recorder
 numpy
 pyttsx3
 groq
 pygame
 python-dotenv
-streamlit
 scipy

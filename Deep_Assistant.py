@@ -7,13 +7,8 @@ from groq import Groq
 import pygame
 import tempfile
 import os
-import sounddevice as sd
 from scipy.io.wavfile import write
 from config import (
-    FORMAT,
-    CHANNELS,
-    RATE,
-    CHUNK,
     SILENCE_THRESHOLD,
     SILENCE_DURATION,
     PRE_SPEECH_BUFFER_DURATION,
@@ -23,6 +18,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
 
 class VoiceAssistant:
     def __init__(self):
@@ -51,61 +47,17 @@ class VoiceAssistant:
         rms = np.sqrt(np.mean(data**2))
         return rms < SILENCE_THRESHOLD
 
-    def listen_for_speech(self):
+    def process_uploaded_audio(self, uploaded_file):
         """
-        Continuously detect silence and start recording when speech is detected.
+        Process an uploaded audio file.
+
+        Args:
+            uploaded_file: The uploaded audio file.
 
         Returns:
-            BytesIO: The recorded audio bytes.
+            BytesIO: The audio bytes.
         """
-        print("Listening for speech...")
-        pre_speech_buffer = []
-        silent_chunks = 0
-        recording = False
-        frames = []
-
-        def callback(indata, frame_count, time, status):
-            nonlocal recording, silent_chunks, pre_speech_buffer, frames
-
-            if status:
-                print(f"Sounddevice error: {status}")
-
-            audio_data = indata[:, 0]  # Use the first channel
-            if recording:
-                frames.append(audio_data)
-                if self.is_silence(audio_data):
-                    silent_chunks += 1
-                else:
-                    silent_chunks = 0
-
-                # Stop recording if silence duration exceeds threshold
-                if silent_chunks > int(RATE / CHUNK * SILENCE_DURATION):
-                    raise sd.CallbackStop()
-            else:
-                if not self.is_silence(audio_data):
-                    recording = True
-                    frames = pre_speech_buffer.copy()
-                    frames.append(audio_data)
-                else:
-                    pre_speech_buffer.append(audio_data)
-                    if len(pre_speech_buffer) > int(RATE * PRE_SPEECH_BUFFER_DURATION / CHUNK):
-                        pre_speech_buffer.pop(0)
-
-        with sd.InputStream(
-            samplerate=RATE,
-            channels=CHANNELS,
-            dtype='float32',
-            blocksize=CHUNK,
-            callback=callback
-        ):
-            try:
-                sd.sleep(int(10 * 1000))  # Listen for up to 10 seconds
-            except sd.CallbackStop:
-                pass
-
-        # Convert recorded frames to BytesIO
-        audio_bytes = BytesIO()
-        write(audio_bytes, RATE, np.concatenate(frames).astype(np.int16))
+        audio_bytes = BytesIO(uploaded_file.read())
         audio_bytes.seek(0)
         return audio_bytes
 
@@ -219,24 +171,19 @@ class VoiceAssistant:
             print(f"Error getting response from Groq: {e}")
             return "I'm sorry, I couldn't process your request."
 
-    def run(self):
+    def run(self, uploaded_audio):
         """
         Main function to run the voice assistant.
         """
-        while True:
-            try:
-                audio_bytes = self.listen_for_speech()
-                text = self.speech_to_text(audio_bytes)
-                if not text:
-                    print("No speech detected, listening again...")
-                    continue
+        try:
+            audio_bytes = self.process_uploaded_audio(uploaded_audio)
+            text = self.speech_to_text(audio_bytes)
+            if not text:
+                print("No speech detected, listening again...")
+                return
 
-                response_text = self.chat(text)
-                audio_stream = self.text_to_speech(response_text)
-                self.stream_audio(audio_stream)
-            except Exception as e:
-                print(f"An error occurred: {e}")
-
-if __name__ == "__main__":
-    assistant = VoiceAssistant()
-    assistant.run()
+            response_text = self.chat(text)
+            audio_stream = self.text_to_speech(response_text)
+            self.stream_audio(audio_stream)
+        except Exception as e:
+            print(f"An error occurred: {e}")
