@@ -1,0 +1,6 @@
+pyaudio
+numpy
+pyttsx3
+groq
+pygame
+python-dotenv
