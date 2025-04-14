@@ -6,3 +6,4 @@ groq
 pygame
 python-dotenv
 scipy
+toml
