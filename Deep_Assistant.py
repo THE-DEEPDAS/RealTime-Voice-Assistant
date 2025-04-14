@@ -18,6 +18,8 @@ from config import (
     PRE_SPEECH_BUFFER_DURATION,
 )
 from dotenv import load_dotenv
+import sounddevice as sd
+from scipy.io.wavfile import write
 
 # Load environment variables
 load_dotenv()
@@ -60,22 +62,18 @@ class VoiceAssistant:
         Returns:
             BytesIO: The recorded audio bytes.
         """
-        stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
         print("Listening for speech...")
-        pre_speech_buffer = []
-        pre_speech_chunks = int(PRE_SPEECH_BUFFER_DURATION * RATE / CHUNK)
+        duration = 10  # Set a maximum duration for recording
+        sample_rate = RATE
+        audio_data = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=CHANNELS, dtype='int16')
+        sd.wait()  # Wait until recording is finished
+        print("Speech detected, processing...")
 
-        while True:
-            data = stream.read(CHUNK)
-            pre_speech_buffer.append(data)
-            if len(pre_speech_buffer) > pre_speech_chunks:
-                pre_speech_buffer.pop(0)
-
-            if not self.is_silence(data):
-                print("Speech detected, start recording...")
-                stream.stop_stream()
-                stream.close()
-                return self.record_audio(pre_speech_buffer)
+        # Convert audio data to BytesIO
+        audio_bytes = BytesIO()
+        write(audio_bytes, sample_rate, audio_data)
+        audio_bytes.seek(0)
+        return audio_bytes
 
     def record_audio(self, pre_speech_buffer):
         """
