@@ -6,4 +6,3 @@ pygame
 python-dotenv
 streamlit
 scipy
-pyaudio
