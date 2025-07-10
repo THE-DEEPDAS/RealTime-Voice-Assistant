@@ -28,6 +28,3 @@ streamlit run app.py
 ```
 
 Once the application is running, you can interact with the voice assistant by clicking the "Start Listening" button and speaking your queries.
-
-## License
-This project is licensed under the MIT License.
